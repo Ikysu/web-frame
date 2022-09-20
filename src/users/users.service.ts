@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { InjectModel } from '@nestjs/sequelize';
+import { User } from './entities/user.entity';
 
 @Injectable()
 export class UsersService {
+  constructor(
+    @InjectModel(() => User) private userModel: typeof User,
+  ) {}
+  /*
   create(createUserDto: CreateUserDto) {
     return 'This action adds a new user';
   }
@@ -22,5 +26,25 @@ export class UsersService {
 
   remove(id: number) {
     return `This action removes a #${id} user`;
+  }
+  */
+
+  getProfile(id: string) {
+    return this.userModel.findOne({
+      where: {
+        id,
+      },
+    });
+  }
+
+  createProfile(login, transactionHost){
+    return this.userModel.create(
+      {
+        username: login,
+        avatar: process.env.STATIC_URL + 'base.webp',
+        friends: [],
+      },
+      transactionHost,
+    );
   }
 }

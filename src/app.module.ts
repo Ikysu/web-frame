@@ -6,13 +6,9 @@ import { SequelizeModule } from '@nestjs/sequelize';
 import { UsersModule } from './users/users.module';
 import { AccountsModule } from './accounts/accounts.module';
 
-var cfgdb = ConfigModule.forRoot({
-  envFilePath: '.env.dev',
-});
-
 @Module({
   imports: [
-    cfgdb, 
+    ConfigModule.forRoot(),
     SequelizeModule.forRoot({
       dialect: 'mysql',
       host: process.env.DATABASE_HOST,
@@ -21,8 +17,9 @@ var cfgdb = ConfigModule.forRoot({
       password: process.env.DATABASE_PASS,
       database: process.env.DATABASE_NAME,
       models: [],
-      autoLoadModels:true
-    }), UsersModule, AccountsModule,
+      autoLoadModels: true,
+    }),
+    AccountsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

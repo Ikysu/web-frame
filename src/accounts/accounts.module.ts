@@ -1,26 +1,16 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AccountsService } from './accounts.service';
 import { AccountsController } from './accounts.controller';
-import { Column, DataType, Model, Table } from 'sequelize-typescript';
-
-@Table
-export class Account extends Model {
-  @Column({
-      type:DataType.STRING,
-      unique:true,
-      primaryKey:true
-  })
-  login: string;
-
-  @Column
-  password: string;
-
-  @Column
-  profile_id: number;
-}
+import { Account } from './entities/account.entity';
+import { SequelizeModule } from '@nestjs/sequelize';
+import { UsersModule } from 'src/users/users.module';
 
 @Module({
+  imports: [
+    SequelizeModule.forFeature([Account]),
+    UsersModule
+  ],
   controllers: [AccountsController],
-  providers: [AccountsService]
+  providers: [AccountsService],
 })
 export class AccountsModule {}

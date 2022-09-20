@@ -1,8 +1,7 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Res } from '@nestjs/common';
+import { Controller, Post, Body, Res } from '@nestjs/common';
+import { ApiBody } from '@nestjs/swagger';
 import { Response } from 'express';
 import { AccountsService } from './accounts.service';
-import { CreateAccountDto } from './dto/create-account.dto';
-import { UpdateAccountDto } from './dto/update-account.dto';
 import { LoginAccountDto } from './dto/login-account.dto';
 import { RegisterAccountDto } from './dto/register-account';
 
@@ -37,17 +36,23 @@ export class AccountsController {
   }
   */
 
-  @Post("/login")
-  async login(@Body() loginAccountDto: LoginAccountDto, @Res({ passthrough: true }) response: Response) {
+  @Post('login')
+  async login(
+    @Body() loginAccountDto: LoginAccountDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
     const auth = await this.accountsService.login(loginAccountDto);
     response.cookie('set-cookie', auth);
-    return {ok:true};
+    return { ok: true };
   }
 
-  @Post("/register")
-  async register(@Body() registerAccountDto: RegisterAccountDto, @Res({ passthrough: true }) response: Response) {
+  @Post('register')
+  async register(
+    @Body() registerAccountDto: RegisterAccountDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
     const auth = await this.accountsService.register(registerAccountDto);
     response.cookie('set-cookie', auth);
-    return {ok:true};
+    return { ok: true };
   }
 }

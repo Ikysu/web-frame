@@ -1,33 +1,31 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { CreateAccountDto } from './dto/create-account.dto';
-import { UpdateAccountDto } from './dto/update-account.dto';
 import { LoginAccountDto } from './dto/login-account.dto';
 import { InjectModel } from '@nestjs/sequelize';
-import { Account } from './accounts.module';
-import { User } from '../users/users.module';
+import { Account } from './entities/account.entity';
 import { RegisterAccountDto } from './dto/register-account';
 import { Sequelize } from 'sequelize-typescript';
+import { UsersService } from 'src/users/users.service';
 
 function authdata_encrypt(authdata: LoginAccountDto) {
-    const txt = JSON.stringify(authdata);
-    const enc = [];
-    for (let i = 0; i < txt.length; i += 1) {
-        const keyC = process.env.COOKIE_KEY[i % process.env.COOKIE_KEY.length];
-        const encC = `${String.fromCharCode((txt[i].charCodeAt(0) + keyC.charCodeAt(0)) % 256)}`;
-        enc.push(encC);
-    }
-    const str = enc.join('');
-    return Buffer.from(str, 'binary').toString('base64');
+  const txt = JSON.stringify(authdata);
+  const enc = [];
+  for (let i = 0; i < txt.length; i += 1) {
+    const keyC = process.env.COOKIE_KEY[i % process.env.COOKIE_KEY.length];
+    const encC = `${String.fromCharCode(
+      (txt[i].charCodeAt(0) + keyC.charCodeAt(0)) % 256,
+    )}`;
+    enc.push(encC);
+  }
+  const str = enc.join('');
+  return Buffer.from(str, 'binary').toString('base64');
 }
 
 @Injectable()
 export class AccountsService {
   constructor(
-    @InjectModel(Account)
-    @InjectModel(User)
-    private accountModel: typeof Account,
-    private userModel: typeof User,
-    private sequelize: Sequelize
+    private usersService: UsersService,
+    @InjectModel(() => Account) private accountModel: typeof Account,
+    private sequelize: Sequelize,
   ) {}
 
   /*
@@ -57,56 +55,60 @@ export class AccountsService {
   async login(loginAccountDto: LoginAccountDto) {
     const account = await this.accountModel.findOne({
       where: {
-        login:loginAccountDto.login
-      }
-    })
-    if(account){
-      if(account.password===loginAccountDto.password){
+        login: loginAccountDto.login,
+      },
+    });
+    if (account) {
+      if (account.password === loginAccountDto.password) {
         return authdata_encrypt(loginAccountDto);
-      }else{
-        throw new HttpException("Bad password", HttpStatus.BAD_REQUEST)
+      } else {
+        throw new HttpException('Bad password', HttpStatus.BAD_REQUEST);
       }
-    }else{
-      throw new HttpException("Account not found", HttpStatus.BAD_REQUEST)
+    } else {
+      throw new HttpException('Account not found', HttpStatus.BAD_REQUEST);
     }
   }
 
   async register(registerAccountDto: RegisterAccountDto) {
     const check = await this.accountModel.findOne({
       where: {
-        login:registerAccountDto.login
-      }
-    })
-    if(check){
+        login: registerAccountDto.login,
+      },
+    });
+    if (check) {
       try {
-        await this.sequelize.transaction(async t => {
+        await this.sequelize.transaction(async (t) => {
           const transactionHost = { transaction: t };
 
-          const user = await this.userModel.create(
-            { 
-              username:registerAccountDto.login, 
-              avatar:process.env.STATIC_URL+"base.webp",
-              friends:[]
-            },
-            transactionHost,
-          )
+          const user = await this.usersService.createProfile(registerAccountDto.login, transactionHost)
 
-          await this.accountModel.create(
-            { 
-              login:registerAccountDto.login, 
-              password:registerAccountDto.password,
-              profile_id:user.id
-            },
-            transactionHost,
-          );
+          if(user){
+            await this.accountModel.create(
+              {
+                login: registerAccountDto.login,
+                password: registerAccountDto.password,
+                profile_id: user.id,
+              },
+              transactionHost,
+            );
+          }else{
+            throw new Error("User not created")
+          }
+          
         });
         return authdata_encrypt(registerAccountDto);
-      }catch(e){
-        console.log("[TRANSACTION ERROR] "+e)
-        throw new HttpException("Ошибка при выполнении транзакции регистрации", HttpStatus.INTERNAL_SERVER_ERROR)
+      } catch (e) {
+        console.log('[TRANSACTION ERROR] ' + e);
+        throw new HttpException(
+          'Ошибка при выполнении транзакции регистрации',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
       }
-    }else{
-      throw new HttpException("Аккаунт с таким логином уже существует", HttpStatus.BAD_REQUEST)
+    } else {
+      throw new HttpException(
+        'Аккаунт с таким логином уже существует',
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 }
